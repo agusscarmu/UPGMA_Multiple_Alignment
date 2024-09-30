@@ -179,7 +179,7 @@ class Alignment:
         if not filtered:
             k_message = "SIN FILTRAR"     
         else:
-            k_message = f"k={k}"
+            k_message = f"k={self.k}"
     
         if show_values:
             for i in range(len(dtplt)):
@@ -532,15 +532,12 @@ def read_fasta_to_list(file_path):
 stop_event = threading.Event()
 
 
-def loading(language):
+def loading():
     while not stop_event.is_set():
         for indicador in ["|", "/", "-", "\\"]:
             if stop_event.is_set():
                 break
-            if language == "es":
-                print(f"\rAlineando secuencias... {indicador}", end="")
-            else:
-                print(f"\rAligning sequences... {indicador}", end="")
+            print(f"\rAligning sequences... {indicador}", end="")
             time.sleep(0.2)
 
 def clear_console():
@@ -549,8 +546,8 @@ def clear_console():
     else:
         os.system("clear")
 
-def start_multiple_alignment(fasta, type_of_sequences, blosum, language):
-    thread_loading = threading.Thread(target=loading, args=(language,))
+def start_multiple_alignment(fasta, type_of_sequences, blosum):
+    thread_loading = threading.Thread(target=loading)
     thread_loading.daemon = True
     thread_loading.start()
 
@@ -562,69 +559,30 @@ def start_multiple_alignment(fasta, type_of_sequences, blosum, language):
 
     option = 0
 
-    if language == "es":
-        while option != 4:
-            clear_console()
-            print("\nALINEAMIENTO MÚLTIPLE DE SECUENCIAS\n------------------------------------------------------")
-            print("\n1. Mostrar dendograma")
-            print("2. Mostrar alineamientos")
-            print("3. Obtener alineamiento entre dos secuencias")
-            print("4. Salir")
-            option = int(input("Ingrese una opción: "))
 
-            if option == 1:
-                file_name = input("Ingrese el nombre del archivo para guardar el dendograma: ")
-                file_name = "images/dendograms/"+file_name + ".png"
-                multiple_alignment.draw_tree(filename=file_name)  
-                print(f"El dendograma ha sido guardado en {file_name}")
-                time.sleep(2)  
-            elif option == 2:
-                multiple_alignment.show_alignment()
-                input("Presione cualquier tecla para continuar...")
-            elif option == 3:
-                seq1 = input("Ingrese el nombre de la primera secuencia: ")
-                seq2 = input("Ingrese el nombre de la segunda secuencia: ")
-                alignment = multiple_alignment.obtain_alignment(seq1, seq2)
-                if alignment is None:
-                    print("No se encontró un alineamiento entre las secuencias ingresadas.")
-                    time.sleep(2)
-                else:
-                    option_3 = 0
-                    while option_3 != 5:
-                        clear_console()
-                        print(f"\nALINEAMIENTO DE {seq1.upper()} y {seq2.upper()}\n------------------------------------------------------")
-                        print("\n1. Mostrar dotplot")
-                        print("2. Mostrar dotplot filtrado")
-                        print("3. Mostrar alineamiento")
-                        print("4. Obtener Score")
-                        print("5. Volver a opciones de alineamiento multiple")
-
-                        option_3 = int(input("Ingrese una opción: "))
-                        if option_3 == 1 or option_3 == 2:
-                            file_name = input("Ingrese el nombre del archivo para guardar el dotplot: ")
-                            file_name = "images/dotplots/"+file_name + ".png"
-                            alignment.show_dotplot(filename=file_name) if option_3 == 1 else alignment.show_dotplot(filename=file_name, filtered=True, show_alignment=True)
-                            print(f"El dotplot ha sido guardado en {file_name}")
-                            time.sleep(2) 
-                        elif option_3 == 3:
-                            print(alignment.traduced_alignment)
-                            input("Presione cualquier tecla para continuar...")
-                        elif option_3 == 4:
-                            print(f"Score: {alignment.score}")
-                            input("Presione cualquier tecla para continuar...")
-    else:
-        while option != 4:
+    while option != 4:
             clear_console()
             print("\nMULTIPLE SEQUENCE ALIGNMENT\n------------------------------------------------------")
             print("\n1. Show dendogram")
             print("2. Show alignments")
             print("3. Get alignment between two sequences")
             print("4. Exit")
-            option = int(input("Enter an option: "))
+            while True:
+                try:
+                    option = int(input("Enter an option: "))
+                    break
+                except ValueError:
+                    print("Please enter a valid number.")
 
             if option == 1:
                 file_name = input("Enter the file name to save the dendogram: ")
-                file_name = "images/dendograms/"+file_name + ".png"
+                directory = "graphics/dendograms/"
+                
+                # Verificar si el directorio existe y crearlo si no es así
+                if not os.path.exists(directory):
+                    os.makedirs(directory)
+                
+                file_name = directory + file_name + ".png"
                 multiple_alignment.draw_tree(filename=file_name)  
                 print(f"The dendogram has been saved in {file_name}")
                 time.sleep(2)  
@@ -649,10 +607,22 @@ def start_multiple_alignment(fasta, type_of_sequences, blosum, language):
                         print("4. Get Score")
                         print("5. Back to multiple alignment options")
 
-                        option_3 = int(input("Enter an option: "))
+                        while True:
+                            try:
+                                option_3 = int(input("Enter an option: "))
+                                break
+                            except ValueError:
+                                print("Please enter a valid number.")
+
                         if option_3 == 1 or option_3 == 2:
                             file_name = input("Enter the file name to save the dotplot: ")
-                            file_name = "images/dotplots/"+file_name + ".png"
+                            directory = "graphics/dotplots/"
+
+                            # Verificar si el directorio existe y crearlo si no es así
+                            if not os.path.exists(directory):
+                                os.makedirs(directory)
+
+                            file_name = directory+file_name + ".png"
                             alignment.show_dotplot(filename=file_name) if option_3 == 1 else alignment.show_dotplot(filename=file_name, filtered=True, show_alignment=True)
                             print(f"The dotplot has been saved in {file_name}")
                             time.sleep(2) 
@@ -680,14 +650,10 @@ def main():
     parser.add_argument('--blosum', type=str, default='BLOSUM62', 
                         help='Especificar la matriz BLOSUM a usar (default: BLOSUM62).')
 
-    # Argumento opcional: idioma
-    parser.add_argument('--language', type=str, default='es', choices=['es', 'en'], 
-                        help='Especificar el idioma del script (default: es).')
-
     # Parsear los argumentos
     args = parser.parse_args()
 
-    start_multiple_alignment(args.fasta_file, args.type_of_sequences, args.blosum, args.language)
+    start_multiple_alignment(args.fasta_file, args.type_of_sequences, args.blosum)
 
 
 if __name__ == "__main__":
